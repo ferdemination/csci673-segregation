@@ -3,7 +3,7 @@ import numpy as np
 
 # Constants
 GRID_SIZE = 20
-CELL_SIZE = 20
+CELL_SIZE = 30
 WIDTH = HEIGHT = GRID_SIZE * CELL_SIZE
 FPS = 30
 PREFERENCE = 1.0  # y = p - 1 in Zhang's model
