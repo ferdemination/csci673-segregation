@@ -107,9 +107,9 @@ class Grid:
     
 
 Y = 10                                      # fixed income
-N = 5                                      # N x N grid size
-num_black = 10                             # Black agents
-num_white = 10                            # White agents
+N = 30                                      # N x N grid size
+num_black = 400                             # Black agents
+num_white = 400                            # White agents
 num_vacant = N*N - num_black - num_white    # total vacant spots
 alpha = 0.01                                # fraction of intorelant White agents
 beta  = 2
@@ -141,29 +141,25 @@ for i in range(1000):
         # compares utility of agent 2 in pos1 and pos2
         u_move = g.get_utility(pos1,delta2)
         u_stay = g.get_utility(pos2, delta2)
-        if u_move > u_stay:
-            prob = log_linear_accept(u_stay,u_move)
-            if(random.random() < prob):
-                g.swap_cells(pos1,pos2)
+        prob = log_linear_accept(u_stay,u_move)
+        if(random.random() < prob):
+            g.swap_cells(pos1,pos2)
     elif (type2 == "vacant"):
         u_move = g.get_utility(pos2,delta1)
         u_stay = g.get_utility(pos1, delta1)
-        if u_move > u_stay:
-            prob = log_linear_accept(u_stay,u_move)
-            if(random.random() < prob):
-                g.swap_cells(pos1,pos2)
+        prob = log_linear_accept(u_stay,u_move)
+        if(random.random() < prob):
+            g.swap_cells(pos1,pos2)
     else:
         # if none of the cells are vacant they can swap
         u_move_2 = g.get_utility(pos1,delta2)
         u_stay_2 = g.get_utility(pos2,delta2)
         u_move_1 = g.get_utility(pos2,delta1)
         u_stay_1 = g.get_utility(pos1,delta1)
-
-        if (u_move_2 > u_stay_2 and u_move_1 > u_stay_1):
-            prob1 = log_linear_accept(u_stay_1,u_move_1)
-            prob2 = log_linear_accept(u_stay_2,u_move_2)
-            if (random.random() < prob1*prob2):
-                g.swap_cells(pos1,pos2)
+        prob1 = log_linear_accept(u_stay_1,u_move_1)
+        prob2 = log_linear_accept(u_stay_2,u_move_2)
+        if (random.random() < prob1*prob2):
+            g.swap_cells(pos1,pos2)
     g.display()
 
 
