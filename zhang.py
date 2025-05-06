@@ -79,19 +79,18 @@ class Grid:
 
     # for utility of black agents use delta = 1 always (for this model at least)
     def get_utility(self, pos,delta):
-        nbhd_x, nbhd_y = self.get_neighborhood(pos)
+        neigh = self.get_neighborhood(pos)
 
         if delta == -1:
             raise ValueError("Utility is undefined for vacant cells")
         whites = 0
         blacks = 0
 
-        for i in nbhd_x:
-            for j in nbhd_y:
-                if self.grid[i][j]['type'] == "white":
-                    whites += 1
-                elif self.grid[i][j]['type'] == "black":
-                    blacks += 1
+        for (i,j) in neigh:
+            if self.grid[i][j]['type'] == "white":
+                whites += 1
+            elif self.grid[i][j]['type'] == "black":
+                blacks += 1
 
             return Y - delta * whites - blacks
     def get_two_random_positions(self):
@@ -108,9 +107,9 @@ class Grid:
     
 
 Y = 10                                      # fixed income
-N = 30                                      # N x N grid size
-num_black = 400                             # Black agents
-num_white = 400                             # White agents
+N = 5                                      # N x N grid size
+num_black = 10                             # Black agents
+num_white = 10                            # White agents
 num_vacant = N*N - num_black - num_white    # total vacant spots
 alpha = 0.01                                # fraction of intorelant White agents
 beta  = 2
@@ -127,12 +126,12 @@ g.display()
 
 #implentation of the log-linear behavioral rule
 
-for i in range(10):
+for i in range(1000):
     list_pos = g.get_two_random_positions()
     pos1 = list_pos[0]
     pos2 = list_pos[1]
     delta1 = g.get_delta(pos1)
-    delta2 = g.get_delta(pos1)
+    delta2 = g.get_delta(pos2)
     type1 = g.get_type(pos1)
     type2 = g.get_type(pos2)
 
@@ -165,6 +164,7 @@ for i in range(10):
             prob2 = log_linear_accept(u_stay_2,u_move_2)
             if (random.random() < prob1*prob2):
                 g.swap_cells(pos1,pos2)
+    g.display()
 
 
 
