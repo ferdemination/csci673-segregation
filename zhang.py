@@ -166,7 +166,7 @@ for i in range(10):
             if (random.random() < prob1*prob2):
                 g.swap_cells(pos1,pos2)
 
-
+m
 
 
 
