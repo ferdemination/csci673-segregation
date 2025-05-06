@@ -150,22 +150,21 @@ def animate_grid(grid, steps=100, interval=300, beta=1.0, show_delta=False):
         type1 = g.get_type(pos1)
         type2 = g.get_type(pos2)
 
-        if (type1 == "vacant" and type2 == "vacant"):
-            pass
-        if(type1 == "vacant"):
+
+        if(type1 == "vacant" and type2 != "vacant"):
             # compares utility of agent 2 in pos1 and pos2
             u_move = g.get_utility(pos1,delta2)
             u_stay = g.get_utility(pos2, delta2)
             prob = log_linear_accept(u_stay,u_move,beta)
             if(random.random() < prob):
                 g.swap_cells(pos1,pos2)
-        elif (type2 == "vacant"):
+        elif (type2 == "vacant" and type1 != "vacant"):
             u_move = g.get_utility(pos2,delta1)
             u_stay = g.get_utility(pos1, delta1)
             prob = log_linear_accept(u_stay,u_move,beta)
             if(random.random() < prob):
                 g.swap_cells(pos1,pos2)
-        else:
+        elif (type1 != "vacant" and type2 != "vacant"):
             # if none of the cells are vacant they can swap
             u_move_2 = g.get_utility(pos1,delta2)
             u_stay_2 = g.get_utility(pos2,delta2)
