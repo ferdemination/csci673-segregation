@@ -2,11 +2,13 @@ from enum import Enum
 from itertools import product
 import random
 import math
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 # Simulating Zhang's model of segregation https://wordpress.clarku.edu/wp-content/uploads/sites/423/2016/03/segregation.pdf
 
 class Grid:
-    def __init__(self, N, Y,num_black, num_vacant, alpha=0.1):
+    def __init__(self, N, Y, num_black, num_vacant, alpha=0.1):
         self.N = N
         self.Y = Y
         self.grid = [[None for _ in range(N)] for _ in range(N)]
@@ -119,50 +121,77 @@ def log_linear_accept(u1,u2, beta=1.0):
     prob = math.exp(beta * u2) / (math.exp(beta * u1) + math.exp(beta * u2))
     return prob
 
-# define the grid
-g = Grid(N, Y, num_black, num_vacant, alpha)
-print("Initial Grid:")
-g.display()
+def animate_grid(grid, steps=100, interval=300, beta=1.0, show_delta=False):
+    N = grid.N
+    type_to_color = {'black': 'black', 'white': 'white', 'vacant': 'gray'}
 
-#implentation of the log-linear behavioral rule
+    fig, ax = plt.subplots()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_xlim(0, N)
+    ax.set_ylim(0, N)
+    ax.set_aspect('equal')
 
-for i in range(1000):
-    list_pos = g.get_two_random_positions()
-    pos1 = list_pos[0]
-    pos2 = list_pos[1]
-    delta1 = g.get_delta(pos1)
-    delta2 = g.get_delta(pos2)
-    type1 = g.get_type(pos1)
-    type2 = g.get_type(pos2)
+    # Initial state
+    patches = [[plt.Rectangle((j, N-1-i), 1, 1, color='white') for j in range(N)] for i in range(N)]
+    for row in patches:
+        for patch in row:
+            ax.add_patch(patch)
 
-    if (type1 == "vacant" and type2 == "vacant"):
-        continue
-    if(type1 == "vacant"):
-        # compares utility of agent 2 in pos1 and pos2
-        u_move = g.get_utility(pos1,delta2)
-        u_stay = g.get_utility(pos2, delta2)
-        prob = log_linear_accept(u_stay,u_move)
-        if(random.random() < prob):
-            g.swap_cells(pos1,pos2)
-    elif (type2 == "vacant"):
-        u_move = g.get_utility(pos2,delta1)
-        u_stay = g.get_utility(pos1, delta1)
-        prob = log_linear_accept(u_stay,u_move)
-        if(random.random() < prob):
-            g.swap_cells(pos1,pos2)
-    else:
-        # if none of the cells are vacant they can swap
-        u_move_2 = g.get_utility(pos1,delta2)
-        u_stay_2 = g.get_utility(pos2,delta2)
-        u_move_1 = g.get_utility(pos2,delta1)
-        u_stay_1 = g.get_utility(pos1,delta1)
-        prob1 = log_linear_accept(u_stay_1,u_move_1)
-        prob2 = log_linear_accept(u_stay_2,u_move_2)
-        if (random.random() < prob1*prob2):
-            g.swap_cells(pos1,pos2)
-    g.display()
+    delta_text = [[ax.text(j + 0.5, N - 1 - i + 0.5, '', ha='center', va='center', fontsize=8, color='red')
+                   for j in range(N)] for i in range(N)]
 
+    def update(frame):
+        list_pos = g.get_two_random_positions()
+        pos1 = list_pos[0]
+        pos2 = list_pos[1]
+        delta1 = g.get_delta(pos1)
+        delta2 = g.get_delta(pos2)
+        type1 = g.get_type(pos1)
+        type2 = g.get_type(pos2)
 
+        if (type1 == "vacant" and type2 == "vacant"):
+            pass
+        if(type1 == "vacant"):
+            # compares utility of agent 2 in pos1 and pos2
+            u_move = g.get_utility(pos1,delta2)
+            u_stay = g.get_utility(pos2, delta2)
+            prob = log_linear_accept(u_stay,u_move,beta)
+            if(random.random() < prob):
+                g.swap_cells(pos1,pos2)
+        elif (type2 == "vacant"):
+            u_move = g.get_utility(pos2,delta1)
+            u_stay = g.get_utility(pos1, delta1)
+            prob = log_linear_accept(u_stay,u_move,beta)
+            if(random.random() < prob):
+                g.swap_cells(pos1,pos2)
+        else:
+            # if none of the cells are vacant they can swap
+            u_move_2 = g.get_utility(pos1,delta2)
+            u_stay_2 = g.get_utility(pos2,delta2)
+            u_move_1 = g.get_utility(pos2,delta1)
+            u_stay_1 = g.get_utility(pos1,delta1)
+            prob1 = log_linear_accept(u_stay_1,u_move_1,beta)
+            prob2 = log_linear_accept(u_stay_2,u_move_2,beta)
+            if (random.random() < prob1*prob2):
+                g.swap_cells(pos1,pos2)
+
+        for i in range(N):
+            for j in range(N):
+                cell = grid.grid[i][j]
+                color = type_to_color[cell['type']]
+                patches[i][j].set_facecolor(color)
+                if show_delta:
+                    delta_text[i][j].set_text(str(cell['delta']))
+                else:
+                    delta_text[i][j].set_text('')
+        return sum(patches, []) + sum(delta_text, [])
+
+    ani = animation.FuncAnimation(fig, update, frames=steps, interval=interval, blit=False)
+    plt.show()
+
+g = Grid(N=6, Y = 10, num_black=8, num_vacant=8, alpha=0.2)
+animate_grid(g, steps=100, interval=200, beta=2.0, show_delta=True,)
 
 
 
