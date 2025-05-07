@@ -47,6 +47,49 @@ def get_neighbors(x, y, grid):
             neighbors.append(grid[nx][ny])
     return neighbors
 
+
+#Calculate segregation metrics
+
+def bothoccupied(edge):
+    return (edge[0] != VACANT) and (edge[1] != VACANT)
+
+def num_interracial_neighbors(x,y,grid):
+    total_interracial_neighbors = 0
+    neighbors = get_neighbors(x,y,grid)
+    for neighbor in neighbors:
+        if((neighbor != grid[x][y]) and bothoccupied([neighbor,grid[x][y]])):
+            total_interracial_neighbors += 1
+    return total_interracial_neighbors
+
+def total_interracial_edges(grid):
+    totaledges = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            totaledges += num_interracial_neighbors(i,j,grid)
+    return totaledges/2
+
+def total_neighbors(x,y,grid):
+    neighbors = get_neighbors(x,y,grid)
+    total = 0
+    for node in neighbors:
+        if (node != VACANT):
+            total += 1
+    return total
+
+def total_edges(grid):
+    totaledges = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            totaledges += total_neighbors(i,j,grid)
+    return totaledges/2
+
+def interracialneighborratio(grid):
+    if(total_edges(grid) > 0):
+        return total_interracial_edges(grid)/total_edges(grid)
+    else:
+        print('no neighbors')
+        return 0
+
 # Utility functions
 def utility_black(x, y, grid):
     neighbors = get_neighbors(x, y, grid)
@@ -117,6 +160,7 @@ def simulate_step(grid):
         candidates.sort(reverse=True, key=lambda x: x[0])
         delta_u, u_old, u_new, (from_x, from_y), (to_x, to_y) = candidates[0]
         print(f"Move from ({from_x}, {from_y}) to ({to_x}, {to_y}) | Previous Utility: {u_old:.2f}, New Utility: {u_new:.2f}, Change: {delta_u:.2f}")
+        print('RATIO OF INTERRACIAL NEIGHBORS:' + str(interracialneighborratio(grid)))
         grid[to_x][to_y] = grid[from_x][from_y]
         grid[from_x][from_y] = VACANT
         return True
