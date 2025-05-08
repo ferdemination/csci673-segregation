@@ -7,22 +7,29 @@ import matplotlib.animation as animation
 
 # Simulating Zhang's model of segregation https://wordpress.clarku.edu/wp-content/uploads/sites/423/2016/03/segregation.pdf
 
+
+        
+
 class Grid:
-    def __init__(self, N, Y, num_black, num_vacant, alpha=0.1):
+    def __init__(self, N,p,color_dict,colors):
         self.N = N
-        self.Y = Y
         self.grid = [[None for _ in range(N)] for _ in range(N)]
+        self.p = p
+        self.color_dict = color_dict
+        self.colors = colors
 
         total_cells = N * N
-        num_white = total_cells - num_black - num_vacant
+        num_vacant = total_cells - sum(colors.values())
 
-        if num_white < 0:
-            raise ValueError("Too many black and vacant cells for the grid size.")
+        if num_vacant < 0:
+            raise ValueError("There are no vacant cells!")
+        
+        # create cell types
+        vacancies = ["vacant"]*num_vacant
+        l = [[i]*colors[i] for i in colors.keys()]
+        cells = [x for sublist in l for x in sublist]
+        cells.extend(vacancies)
 
-        # Create cell types
-        cells = (['black'] * num_black +
-                 ['vacant'] * num_vacant +
-                 ['white'] * num_white)
         random.shuffle(cells)
 
         # Assign types and deltas
@@ -30,26 +37,13 @@ class Grid:
         for i in range(N):
             for j in range(N):
                 cell_type = cells[idx]
-                delta = self.get_delta_for_type(cell_type, alpha)
-                self.grid[i][j] = {'type': cell_type, 'delta': delta}
+                self.grid[i][j] = cell_type
                 idx += 1
 
-    def get_delta_for_type(self, cell_type, alpha):
-        if cell_type == 'black':
-            return 1
-        elif cell_type == 'vacant':
-            return -1
-        elif cell_type == 'white':
-            # α fraction of white cells get a random non-zero delta (e.g. from -5 to 5, excluding 0)
-            if random.random() > alpha:
-                return 1
-            else:
-                return 0
-
-    def display(self):
-        for row in self.grid:
-            print([f"{cell['type'][0].upper()}:{cell['delta']}" for cell in row])
-        print()
+    def get_deltas_for_type(self, cell_type):
+        if cell_type == "vacant":
+            return [0 for _ in range(len(self.colors))]
+        return self.p[self.color_dict[cell_type]]
 
     def swap_cells(self, pos1, pos2):
         i1, j1 = pos1
@@ -80,50 +74,68 @@ class Grid:
         return neigh
 
     # for utility of black agents use delta = 1 always (for this model at least)
-    def get_utility(self, pos,delta):
-        neigh = self.get_neighborhood(pos)
+    def get_utility(self, pos1,pos2):
+        pos_x, pos_y = pos1 
+        cell_type = self.grid[pos_x][pos_y]    
+        deltas = self.get_deltas_for_type(cell_type)
 
-        if delta == -1:
-            raise ValueError("Utility is undefined for vacant cells")
-        whites = 0
-        blacks = 0
-
+        neigh = self.get_neighborhood(pos2,neigh_type="moore")
+        utility = 0
         for (i,j) in neigh:
-            if self.grid[i][j]['type'] == "white":
-                whites += 1
-            elif self.grid[i][j]['type'] == "black":
-                blacks += 1
+            if self.grid[i][j] == "vacant":
+                continue
+            utility += deltas[self.color_dict[self.grid[i][j]]]
+        return utility
+    
+    def next_step(self):
+        for i in range(self.N):
+            for j in range(self.N):
 
-            return Y - delta * whites - blacks
-    def get_two_random_positions(self):
-        positions = [(i, j) for i in range(self.N) for j in range(self.N)]
-        return random.sample(positions, 2)
+                if (self.grid[i][j] == "vacant"):
+                    u_move = self.get_utility((i,i), (i,j))
+                    u_stay = self.get_utility((i,i), (i,i))
+                    if (u_move > u_stay):
+                        self.swap_cells((i,i),(i,j))
+                elif (self.grid[i][i] == "vacant"):
+                    u_move = self.get_utility((i,j), (i,i))
+                    u_stay = self.get_utility((i,j), (i,j))
+                    if (u_move > u_stay):
+                        self.swap_cells((i,i), (i,j))
+                else:
+                    u_move_1 = self.get_utility((i,i), (i,j))
+                    u_stay_1 = self.get_utility((i,i), (i,i))
+                    u_move_2 = self.get_utility((i,j), (i,i))
+                    u_stay_2 = self.get_utility((i,j), (i,j))
+                    if(u_move_1 > u_stay_1 and u_move_2 > u_stay_2):
+                        self.swap_cells((i,i),(i,j))
     
     def get_type(self,pos):
         pos_x, pos_y = pos
-        return self.grid[pos_x][pos_y]["type"]
+        return self.grid[pos_x][pos_y]
 
-    def get_delta(self,pos):
-        pos_x, pos_y = pos
-        return self.grid[pos_x][pos_y]["delta"]
+
     
 
-Y = 10                                      # fixed income
+                                            # fixed income
 N = 30                                      # N x N grid size
-num_black = 400                             # Black agents
-num_white = 400                            # White agents
-num_vacant = N*N - num_black - num_white    # total vacant spots
-alpha = 0.01                                # fraction of intorelant White agents
-beta  = 2
 
-def log_linear_accept(u1,u2, beta=1.0):
+#sets the number of cells having each color
+colors = {"white":100, "black":100, "orange":50, "blue":50}
+l = list(colors.keys())
+
+# defines a color->index coreespondence
+color_dict = {c:l.index(c) for c in l}
+
+#p_ij matrix, 
+p = [[1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1]]
+
+#def log_linear_accept(u1,u2, beta=1.0):
     # Compute acceptance probability for swapping
-    prob = math.exp(beta * u2) / (math.exp(beta * u1) + math.exp(beta * u2))
-    return prob
+   # prob = math.exp(beta * u2) / (math.exp(beta * u1) + math.exp(beta * u2))
+   # return prob
 
-def animate_grid(grid, steps=100, interval=300, beta=1.0, show_delta=False):
-    N = grid.N
-    type_to_color = {'black': 'black', 'white': 'white', 'vacant': 'gray'}
+def animate_grid(g, steps=100, interval=300):
+    N = g.N
 
     fig, ax = plt.subplots()
     ax.set_xticks([])
@@ -142,55 +154,22 @@ def animate_grid(grid, steps=100, interval=300, beta=1.0, show_delta=False):
                    for j in range(N)] for i in range(N)]
 
     def update(frame):
-        list_pos = g.get_two_random_positions()
-        pos1 = list_pos[0]
-        pos2 = list_pos[1]
-        delta1 = g.get_delta(pos1)
-        delta2 = g.get_delta(pos2)
-        type1 = g.get_type(pos1)
-        type2 = g.get_type(pos2)
-
-
-        if(type1 == "vacant" and type2 != "vacant"):
-            # compares utility of agent 2 in pos1 and pos2
-            u_move = g.get_utility(pos1,delta2)
-            u_stay = g.get_utility(pos2, delta2)
-            prob = log_linear_accept(u_stay,u_move,beta)
-            if(random.random() < prob):
-                g.swap_cells(pos1,pos2)
-        elif (type2 == "vacant" and type1 != "vacant"):
-            u_move = g.get_utility(pos2,delta1)
-            u_stay = g.get_utility(pos1, delta1)
-            prob = log_linear_accept(u_stay,u_move,beta)
-            if(random.random() < prob):
-                g.swap_cells(pos1,pos2)
-        elif (type1 != "vacant" and type2 != "vacant"):
-            # if none of the cells are vacant they can swap
-            u_move_2 = g.get_utility(pos1,delta2)
-            u_stay_2 = g.get_utility(pos2,delta2)
-            u_move_1 = g.get_utility(pos2,delta1)
-            u_stay_1 = g.get_utility(pos1,delta1)
-            prob1 = log_linear_accept(u_stay_1,u_move_1,beta)
-            prob2 = log_linear_accept(u_stay_2,u_move_2,beta)
-            if (random.random() < prob1*prob2):
-                g.swap_cells(pos1,pos2)
-
+        g.next_step()
         for i in range(N):
             for j in range(N):
-                cell = grid.grid[i][j]
-                color = type_to_color[cell['type']]
-                patches[i][j].set_facecolor(color)
-                if show_delta:
-                    delta_text[i][j].set_text(str(cell['delta']))
+                cell = g.grid[i][j]
+                if (cell == "vacant"):
+                    color = "gray"
                 else:
-                    delta_text[i][j].set_text('')
+                    color = cell
+                patches[i][j].set_facecolor(color)
         return sum(patches, []) + sum(delta_text, [])
 
     ani = animation.FuncAnimation(fig, update, frames=steps, interval=interval, blit=False)
     plt.show()
 
-g = Grid(N=6, Y = 10, num_black=8, num_vacant=8, alpha=0.2)
-animate_grid(g, steps=100, interval=200, beta=2.0, show_delta=True,)
+g = Grid(N=N,p=p,color_dict=color_dict,colors=colors)
+animate_grid(g, steps=100, interval=200)
 
 
 
