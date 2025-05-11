@@ -92,6 +92,7 @@ class Grid:
     def improving_move_then_swap(self):
         u_move = 0
         u_stay = 0
+        candidates = []
         for i in range(N):
             for j in range(N):
                 for k in range(i,N):
@@ -109,14 +110,19 @@ class Grid:
                             u_move = self.get_utility(cell_type_2, (i,j))
                             u_stay = self.get_utility(cell_type_2, (k,l))
                         if (u_move > u_stay):
-                            self.swap_cells((i,j),(k,l))
+                            candidates.append((u_move-u_stay, u_stay, u_move, (i, j), (k, l)))
                         if(cell_type_1 != "vacant" and cell_type_2 != "vacant"):
                             u_move_1 = self.get_utility(cell_type_1, (k,l))
                             u_stay_1 = self.get_utility(cell_type_1, (i,j))
                             u_move_2 = self.get_utility(cell_type_2, (i,j))
                             u_stay_2 = self.get_utility(cell_type_2, (k,l))
                             if(u_move_1 > u_stay_1 and u_move_2 > u_stay_2):
-                                self.swap_cells((i,j),(k,l))
+                                candidates.append((u_move_1-u_stay_1,u_stay_1, u_move_1, (i, j), (k, l)))
+        if candidates:
+            candidates.sort(reverse=True, key=lambda x: x[0])
+            delta_u, u_old, u_new, (from_x, from_y), (to_x, to_y) = candidates[0]
+            print(f"Move from ({from_x}, {from_y}) to ({to_x}, {to_y}) | Previous Utility: {u_old:.2f}, New Utility: {u_new:.2f}, Change: {delta_u:.2f}")
+        self.swap_cells( (to_x,to_y), (from_x,from_y) )
 
     def next_step(self):
         self.improving_move_then_swap()
