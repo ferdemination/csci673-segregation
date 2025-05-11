@@ -2,13 +2,12 @@ from enum import Enum
 from itertools import product
 import random
 import math
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+import pygame
 
 # Simulating Zhang's model of segregation https://wordpress.clarku.edu/wp-content/uploads/sites/423/2016/03/segregation.pdf
 
 
-        
+
 
 class Grid:
     def __init__(self, N,p,color_dict,colors):
@@ -20,7 +19,7 @@ class Grid:
 
         total_cells = N * N
         num_vacant = total_cells - sum(colors.values())
-
+        print(num_vacant)
         if num_vacant < 0:
             raise ValueError("There are no vacant cells!")
         
@@ -29,8 +28,14 @@ class Grid:
         l = [[i]*colors[i] for i in colors.keys()]
         cells = [x for sublist in l for x in sublist]
         cells.extend(vacancies)
+        
 
         random.shuffle(cells)
+        count = 0
+        for i in cells:
+            if i == "orange":
+                count += 1
+        print(count)
 
         # Assign types and deltas
         idx = 0
@@ -74,11 +79,8 @@ class Grid:
         return neigh
 
     # for utility of black agents use delta = 1 always (for this model at least)
-    def get_utility(self, pos1,pos2):
-        pos_x, pos_y = pos1 
-        cell_type = self.grid[pos_x][pos_y]    
+    def get_utility(self,cell_type,pos2):
         deltas = self.get_deltas_for_type(cell_type)
-
         neigh = self.get_neighborhood(pos2,neigh_type="moore")
         utility = 0
         for (i,j) in neigh:
@@ -87,27 +89,39 @@ class Grid:
             utility += deltas[self.color_dict[self.grid[i][j]]]
         return utility
     
-    def next_step(self):
-        for i in range(self.N):
-            for j in range(self.N):
+    def improving_move_then_swap(self):
+        u_move = 0
+        u_stay = 0
+        for i in range(N):
+            for j in range(N):
+                for k in range(i,N):
+                    for l in range(j+1, N):
+                        cell_type_1 = self.grid[i][j]
+                        cell_type_2 = self.grid[k][l]
 
-                if (self.grid[i][j] == "vacant"):
-                    u_move = self.get_utility((i,i), (i,j))
-                    u_stay = self.get_utility((i,i), (i,i))
-                    if (u_move > u_stay):
-                        self.swap_cells((i,i),(i,j))
-                elif (self.grid[i][i] == "vacant"):
-                    u_move = self.get_utility((i,j), (i,i))
-                    u_stay = self.get_utility((i,j), (i,j))
-                    if (u_move > u_stay):
-                        self.swap_cells((i,i), (i,j))
-                else:
-                    u_move_1 = self.get_utility((i,i), (i,j))
-                    u_stay_1 = self.get_utility((i,i), (i,i))
-                    u_move_2 = self.get_utility((i,j), (i,i))
-                    u_stay_2 = self.get_utility((i,j), (i,j))
-                    if(u_move_1 > u_stay_1 and u_move_2 > u_stay_2):
-                        self.swap_cells((i,i),(i,j))
+
+                        if (cell_type_1 == "vacant" and cell_type_2 == "vacant"):
+                            continue
+                        elif (cell_type_1 != "vacant" and cell_type_2 == "vacant"):
+                            u_move = self.get_utility(cell_type_1, (k,l))
+                            u_stay = self.get_utility(cell_type_1, (i,j))
+                        elif (cell_type_1 == "vacant" and cell_type_2 != "vacant"):
+                            u_move = self.get_utility(cell_type_2, (i,j))
+                            u_stay = self.get_utility(cell_type_2, (k,l))
+                        if (u_move > u_stay):
+                            self.swap_cells((i,j),(k,l))
+                        if(cell_type_1 != "vacant" and cell_type_2 != "vacant"):
+                            u_move_1 = self.get_utility(cell_type_1, (k,l))
+                            u_stay_1 = self.get_utility(cell_type_1, (i,j))
+                            u_move_2 = self.get_utility(cell_type_2, (i,j))
+                            u_stay_2 = self.get_utility(cell_type_2, (k,l))
+                            if(u_move_1 > u_stay_1 and u_move_2 > u_stay_2):
+                                self.swap_cells((i,j),(k,l))
+
+    def next_step(self):
+        self.improving_move_then_swap()
+
+
     
     def get_type(self,pos):
         pos_x, pos_y = pos
@@ -120,56 +134,63 @@ class Grid:
 N = 30                                      # N x N grid size
 
 #sets the number of cells having each color
-colors = {"white":100, "black":100, "orange":50, "blue":50}
+colors = {"white":300, "black":300, "orange":50}
 l = list(colors.keys())
 
 # defines a color->index coreespondence
 color_dict = {c:l.index(c) for c in l}
 
 #p_ij matrix, 
-p = [[1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1]]
+p = [[1,1,1], [1,1,-1], [1,-1,2]]
+
+FPS = 30
+
+CELL_SIZE = 20
+WIDTH = HEIGHT = N * CELL_SIZE
+
+
 
 #def log_linear_accept(u1,u2, beta=1.0):
     # Compute acceptance probability for swapping
    # prob = math.exp(beta * u2) / (math.exp(beta * u1) + math.exp(beta * u2))
    # return prob
 
-def animate_grid(g, steps=100, interval=300):
-    N = g.N
+def draw_grid(screen, grid):
+    for i in range(N):
+        for j in range(N):
+            if grid[i][j] == "vacant":
+                color = pygame.color.THECOLORS["gray"]
+            else:
+                color = pygame.color.THECOLORS[grid[i][j]]
+            pygame.draw.rect(screen,color , (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+            pygame.draw.rect(screen, (100, 100, 100), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE), 1)
 
-    fig, ax = plt.subplots()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xlim(0, N)
-    ax.set_ylim(0, N)
-    ax.set_aspect('equal')
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Zhang's Segregation Model")
+    clock = pygame.time.Clock()
 
-    # Initial state
-    patches = [[plt.Rectangle((j, N-1-i), 1, 1, color='white') for j in range(N)] for i in range(N)]
-    for row in patches:
-        for patch in row:
-            ax.add_patch(patch)
+    g = Grid(N=N,p=p,color_dict=color_dict,colors=colors)
+    running = True
 
-    delta_text = [[ax.text(j + 0.5, N - 1 - i + 0.5, '', ha='center', va='center', fontsize=8, color='red')
-                   for j in range(N)] for i in range(N)]
-
-    def update(frame):
+    while running:
+        screen.fill((0, 0, 0))
+        draw_grid(screen, g.grid)
+        pygame.display.flip()
+        clock.tick(FPS)
         g.next_step()
-        for i in range(N):
-            for j in range(N):
-                cell = g.grid[i][j]
-                if (cell == "vacant"):
-                    color = "gray"
-                else:
-                    color = cell
-                patches[i][j].set_facecolor(color)
-        return sum(patches, []) + sum(delta_text, [])
 
-    ani = animation.FuncAnimation(fig, update, frames=steps, interval=interval, blit=False)
-    plt.show()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-g = Grid(N=N,p=p,color_dict=color_dict,colors=colors)
-animate_grid(g, steps=100, interval=200)
+    pygame.quit()
+
+if __name__ == '__main__':
+    main()
+
+
 
 
 
