@@ -1,6 +1,8 @@
 from zhang import Grid
+from zhang import draw_grid
 import pygame
 import random
+import metriccomputations
 
 colors = list(pygame.color.THECOLORS.keys())
 print (colors)
@@ -29,5 +31,35 @@ print(p)
 g = Grid(N=N,p=p,color_dict=color_dict,colors=colors)
 
 running = True
+K=5
+#DISPLAY CODE
+FPS = 30
+
+CELL_SIZE = 20
+WIDTH = HEIGHT = N * CELL_SIZE
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+#END DISPLAY
 while running:
+    #DISPLAY CODE:
+    screen.fill((0, 0, 0))
+    draw_grid(screen, g.grid)
+    pygame.display.flip()
+    clock.tick(FPS)
+    #END DISPLAY
+    metrics = metriccomputations.compute_metrics(g,races,K)
     running = g.next_step()
+    for race in races:
+            name = race
+            data = metrics[race]
+            print(f"{name}:")
+            print(f"  Avg distance to nearest different race: {data['avg_distance']:.2f}")
+            print(f"  K={K} neighborhood diversity: {data['diversity']:.2%}")
+            print(f"  Multiracial edge fraction: {data['edge_fraction']:.2%}\n")
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+pygame.quit()
+
