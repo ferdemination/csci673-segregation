@@ -17,15 +17,18 @@ NUM_VACANT = int(BETA * NUM_CELLS)
 NUM_BLACK = (NUM_CELLS - NUM_VACANT) // 2
 TOTAL_WHITE_ORANGE = NUM_BLACK
 NUM_ORANGE = int(ALPHA * TOTAL_WHITE_ORANGE)
-NUM_WHITE = TOTAL_WHITE_ORANGE - NUM_ORANGE
+NUM_BLUE = 40
+NUM_WHITE = TOTAL_WHITE_ORANGE - NUM_ORANGE-NUM_BLUE
 
 # States and Colors
-VACANT, BLACK, WHITE, ORANGE = 0, 1, 2, 3
+VACANT, BLACK, WHITE, ORANGE, BLUE = 0, 1, 2, 3, 4
+races = [BLACK, WHITE, ORANGE, BLUE]
 COLORS = {
     VACANT: (200, 200, 200),
     BLACK: (0, 0, 0),
     WHITE: (255, 255, 255),
-    ORANGE: (255, 165, 0)
+    ORANGE: (255, 165, 0),
+    BLUE: (0,0,255)
 }
 
 # Precompute neighborhood offsets for K-radius (toroidal)
@@ -51,11 +54,10 @@ for dx in range(-GRID_SIZE//2, GRID_SIZE//2 + 1):
 sorted_dxdy_dist.sort(key=lambda x: x[2])
 
 def calculate_multiracial_edge_fractions(grid):
-    race_counts = {
-        BLACK: {'interracial': 0, 'total': 0},
-        WHITE: {'interracial': 0, 'total': 0},
-        ORANGE: {'interracial': 0, 'total': 0}
-    }
+    race_counts = {}
+
+    for race in races:
+        race_counts[race] = {'interracial': 0, 'total': 0} 
     
     for x in range(GRID_SIZE):
         for y in range(GRID_SIZE):
@@ -78,18 +80,17 @@ def calculate_multiracial_edge_fractions(grid):
                 race_counts[current_race]['total'] += total_edges
     
     fractions = {}
-    for race in [BLACK, WHITE, ORANGE]:
+    for race in races:
         total = race_counts[race]['total']
         fractions[race] = race_counts[race]['interracial'] / total if total > 0 else 0.0
     
     return fractions
 
 def compute_metrics(grid):
-    race_data = {
-        BLACK: {'distance_sum': 0, 'distance_count': 0, 'diversity_sum': 0, 'diversity_count': 0},
-        WHITE: {'distance_sum': 0, 'distance_count': 0, 'diversity_sum': 0, 'diversity_count': 0},
-        ORANGE: {'distance_sum': 0, 'distance_count': 0, 'diversity_sum': 0, 'diversity_count': 0}
-    }
+    race_data = {}
+    for race in races:
+        race_data[race] = {'distance_sum': 0, 'distance_count': 0, 'diversity_sum': 0, 'diversity_count': 0}
+    
     
     for x in range(GRID_SIZE):
         for y in range(GRID_SIZE):
@@ -131,7 +132,7 @@ def compute_metrics(grid):
 
     # Calculate averages
     metrics = {}
-    for race in [BLACK, WHITE, ORANGE]:
+    for race in races:
         metrics[race] = {
             'avg_distance': race_data[race]['distance_sum'] / race_data[race]['distance_count'] if race_data[race]['distance_count'] > 0 else 0,
             'diversity': race_data[race]['diversity_sum'] / race_data[race]['diversity_count'] if race_data[race]['diversity_count'] > 0 else 0
@@ -139,7 +140,7 @@ def compute_metrics(grid):
     
     # Add edge fractions
     edge_fractions = calculate_multiracial_edge_fractions(grid)
-    for race in [BLACK, WHITE, ORANGE]:
+    for race in races:
         metrics[race]['edge_fraction'] = edge_fractions[race]
     
     return metrics
@@ -206,6 +207,13 @@ def utility_orange(x, y, grid):
     black_neighbors = sum(1 for n in neighbors if n == BLACK)
     return 10 + PREFERENCE * white_neighbors - black_neighbors
 
+def utility_blue(x, y, grid):
+    neighbors = get_neighbors(x, y, grid)
+    white_neighbors = sum(1 for n in neighbors if n in [WHITE, ORANGE])
+    black_neighbors = sum(1 for n in neighbors if n == BLACK)
+    blue_neighbors = sum(1 for n in neighbors if n == BLUE)
+    return 10 + PREFERENCE * blue_neighbors - black_neighbors - white_neighbors
+
 def initialize_grid():
     grid = [[VACANT for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     positions = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE)]
@@ -224,6 +232,10 @@ def initialize_grid():
         x, y = positions[idx]
         grid[x][y] = ORANGE
         idx += 1
+    for _ in range(NUM_BLUE):
+        x, y = positions[idx]
+        grid[x][y] = BLUE
+        idx += 1
     return grid
 
 def simulate_step(grid):
@@ -231,11 +243,13 @@ def simulate_step(grid):
     for i in range(GRID_SIZE):
         for j in range(GRID_SIZE):
             agent = grid[i][j]
-            if agent in (BLACK, WHITE, ORANGE):
+            if agent in races:
                 if agent == BLACK:
                     u_old = utility_black(i, j, grid)
                 elif agent == WHITE:
                     u_old = utility_white(i, j, grid)
+                elif agent == BLUE:
+                    u_old = utility_blue(i, j, grid)
                 else:
                     u_old = utility_orange(i, j, grid)
                 
@@ -249,6 +263,8 @@ def simulate_step(grid):
                                 u_new = utility_black(ni, nj, grid_copy)
                             elif agent == WHITE:
                                 u_new = utility_white(ni, nj, grid_copy)
+                            elif agent == BLUE:
+                                u_new = utility_blue(ni, nj, grid_copy)
                             else:
                                 u_new = utility_orange(ni, nj, grid_copy)
                             delta_u = u_new - u_old
@@ -294,8 +310,8 @@ def main():
         print(f"\nStep {step}")
         print("=" * 30)
         print(f"Global interracial neighbor ratio: {interracial_ratio:.2%}")
-        for race in [BLACK, WHITE, ORANGE]:
-            name = ["Black", "White", "Orange"][race-1]
+        for race in races:
+            name = ["Black", "White", "Orange","Blue"][race-1]
             data = metrics[race]
             print(f"{name}:")
             print(f"  Avg distance to nearest different race: {data['avg_distance']:.2f}")
