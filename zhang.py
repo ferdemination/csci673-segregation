@@ -78,16 +78,25 @@ class Grid:
     
         return neigh
 
-    # for utility of black agents use delta = 1 always (for this model at least)
-    def get_utility(self,cell_type,pos2):
+    def get_utility(self, cell_type,pos):
         deltas = self.get_deltas_for_type(cell_type)
-        neigh = self.get_neighborhood(pos2,neigh_type="moore")
+        neigh = self.get_neighborhood(pos, neigh_type="moore")
         utility = 0
         for (i,j) in neigh:
             if self.grid[i][j] == "vacant":
                 continue
             utility += deltas[self.color_dict[self.grid[i][j]]]
         return utility
+    # for utility of black agents use delta = 1 always (for this model at least)
+    def improving_utility(self,pos1,pos2):
+        cell_type = self.get_type(pos1)
+        u_stay = self.get_utility(cell_type,pos1)
+        self.swap_cells(pos1,pos2)
+        u_move = self.get_utility(cell_type,pos2)
+        self.swap_cells(pos1,pos2)
+        return u_stay,u_move
+        
+
     
     def improving_move_then_swap(self):
         u_move = 0
@@ -96,27 +105,23 @@ class Grid:
         candidates = []
         for i in range(N):
             for j in range(N):
+                cell_type_1 = self.grid[i][j]
                 for k in range(i,N):
                     for l in range(j+1, N):
-                        cell_type_1 = self.grid[i][j]
                         cell_type_2 = self.grid[k][l]
 
 
                         if (cell_type_1 == "vacant" and cell_type_2 == "vacant"):
                             continue
                         elif (cell_type_1 != "vacant" and cell_type_2 == "vacant"):
-                            u_move = self.get_utility(cell_type_1, (k,l))
-                            u_stay = self.get_utility(cell_type_1, (i,j))
+                            u_stay, u_move = self.improving_utility((i,j),(k,l))
                         elif (cell_type_1 == "vacant" and cell_type_2 != "vacant"):
-                            u_move = self.get_utility(cell_type_2, (i,j))
-                            u_stay = self.get_utility(cell_type_2, (k,l))
+                            u_stay, u_move = self.improving_utility((k,l),(i,j))
                         if (u_move > u_stay):
                             candidates.append((u_move-u_stay, u_stay, u_move, (i, j), (k, l)))
                         if(cell_type_1 != "vacant" and cell_type_2 != "vacant"):
-                            u_move_1 = self.get_utility(cell_type_1, (k,l))
-                            u_stay_1 = self.get_utility(cell_type_1, (i,j))
-                            u_move_2 = self.get_utility(cell_type_2, (i,j))
-                            u_stay_2 = self.get_utility(cell_type_2, (k,l))
+                            u_stay_1,u_move_1 = self.improving_utility((i,j), (k,l))
+                            u_stay_2,u_move_2 = self.improving_utility((k,l), (i,j))
                             if(u_move_1 > u_stay_1 and u_move_2 > u_stay_2):
                                 candidates.append((u_move_1-u_stay_1,u_stay_1, u_move_1, (i, j), (k, l)))
         if candidates:

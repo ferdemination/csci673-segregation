@@ -6,7 +6,7 @@ import metriccomputations
 
 colors = list(pygame.color.THECOLORS.keys())
 print (colors)
-#random.shuffle(colors)
+random.shuffle(colors)
 # N x N grid size
 N = 30
 num_races = 8 # must be multiple of 2 for this experiment                                      
