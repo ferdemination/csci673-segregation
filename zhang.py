@@ -92,6 +92,7 @@ class Grid:
     def improving_move_then_swap(self):
         u_move = 0
         u_stay = 0
+        flag = False
         candidates = []
         for i in range(N):
             for j in range(N):
@@ -122,10 +123,12 @@ class Grid:
             candidates.sort(reverse=True, key=lambda x: x[0])
             delta_u, u_old, u_new, (from_x, from_y), (to_x, to_y) = candidates[0]
             print(f"Move from ({from_x}, {from_y}) to ({to_x}, {to_y}) | Previous Utility: {u_old:.2f}, New Utility: {u_new:.2f}, Change: {delta_u:.2f}")
-        self.swap_cells( (to_x,to_y), (from_x,from_y) )
+            self.swap_cells( (to_x,to_y), (from_x,from_y) )
+            flag = True
+        return flag
 
     def next_step(self):
-        self.improving_move_then_swap()
+       return self.improving_move_then_swap()
 
 
     
@@ -137,10 +140,10 @@ class Grid:
     
 
                                             # fixed income
-N = 30                                      # N x N grid size
+N = 25                                      # N x N grid size
 
 #sets the number of cells having each color
-colors = {"white":300, "black":300, "orange":50}
+colors = {"white":200, "black":200, "orange":50}
 l = list(colors.keys())
 
 # defines a color->index coreespondence
@@ -185,7 +188,7 @@ def main():
         draw_grid(screen, g.grid)
         pygame.display.flip()
         clock.tick(FPS)
-        g.next_step()
+        running = g.next_step()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
