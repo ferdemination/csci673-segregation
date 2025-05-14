@@ -61,7 +61,15 @@ def compute_metrics(g,races,K):
 
     race_data = {}
     for race in races:
-        race_data[race] = {'distance_sum': 0, 'distance_count': 0, 'diversity_sum': 0, 'diversity_count': 0}
+        race_data[race] = {'distance_sum': 0, 
+                           'distance_count': 0,
+                           'diversity_sum': 0,
+                           'diversity_count': 0,
+                           'furthestracedist_sum': 0,
+                           'furthestracedist_count': 0,
+                           'leastracediv_sum': 0,
+                           'leastracediv_count':0
+                           }
     
     
     for x in range(GRID_SIZE):
@@ -79,7 +87,21 @@ def compute_metrics(g,races,K):
                 if neighbor_race != VACANT and neighbor_race != current_race:
                     min_distance = dist
                     break
-            
+
+            #Calculate nearest member of furthest away race
+            racedists = {}
+            for target_race in races:
+                if(target_race != current_race):
+                    racedists[target_race] = 0
+                    for dx, dy, dist in sorted_dxdy_dist:
+                        nx = (x + dx) % GRID_SIZE
+                        ny = (y + dy) % GRID_SIZE
+                        neighbor_race = grid[nx][ny]
+                        if neighbor_race != VACANT and neighbor_race == target_race:
+                            racedists[target_race] = dist
+                            break
+            furthestracedist = max(racedists.values())
+
             # Calculate K-radius diversity
             diff_count = 0
             total_count = 0
@@ -92,22 +114,58 @@ def compute_metrics(g,races,K):
                     if neighbor_race != current_race:
                         diff_count += 1
             
+            # Calculate K-radius leastrace diversity
+            total_count = 0
+            racetotals = {}
+            for race in races:
+                if(race != current_race):
+                    racetotals[race] = 0
+            for dx, dy in k_neighborhood:
+                nx = (x + dx) % GRID_SIZE
+                ny = (y + dy) % GRID_SIZE
+                neighbor_race = grid[nx][ny]
+                if neighbor_race != VACANT:
+                    total_count += 1
+                    if neighbor_race != current_race:
+                        racetotals[neighbor_race] += 1
+            leastracetotal = min(racetotals.values())
+            #print(racetotals.keys())
+            #print(racetotals.values())
+
             # Update race data
             if min_distance is not None:
                 race_data[current_race]['distance_sum'] += min_distance
                 race_data[current_race]['distance_count'] += 1
                 
-            if total_count > 0:
+        
+            if(total_count > 0):
                 fraction = diff_count / total_count
-                race_data[current_race]['diversity_sum'] += fraction
-                race_data[current_race]['diversity_count'] += 1
+            else: 
+                fraction = 0
+            race_data[current_race]['diversity_sum'] += fraction
+            race_data[current_race]['diversity_count'] += 1
+
+            if furthestracedist is not None:
+                race_data[current_race]['furthestracedist_sum'] += furthestracedist
+                race_data[current_race]['furthestracedist_count'] += 1
+            if(total_count > 0):
+                fraction = leastracetotal / total_count
+            else:
+                fraction = 0
+                #print(leastracetotal)
+                #print(total_count)
+                #print('PROBLEM!')
+            race_data[current_race]['leastracediv_sum'] += fraction
+            race_data[current_race]['leastracediv_count'] += 1
 
     # Calculate averages
     metrics = {}
     for race in races:
         metrics[race] = {
             'avg_distance': race_data[race]['distance_sum'] / race_data[race]['distance_count'] if race_data[race]['distance_count'] > 0 else 0,
-            'diversity': race_data[race]['diversity_sum'] / race_data[race]['diversity_count'] if race_data[race]['diversity_count'] > 0 else 0
+            'diversity': race_data[race]['diversity_sum'] / race_data[race]['diversity_count'] if race_data[race]['diversity_count'] > 0 else 0,
+            'WORST_avg_distance': race_data[race]['furthestracedist_sum'] / race_data[race]['furthestracedist_count'] if race_data[race]['furthestracedist_count'] > 0 else 0,
+            'WORST_diversity': race_data[race]['leastracediv_sum'] / race_data[race]['leastracediv_count'] if race_data[race]['leastracediv_count'] > 0 else 0
         }
     
     # Add edge fractions
@@ -142,12 +200,32 @@ def num_interracial_neighbors(x,y,g):
             total_interracial_neighbors += 1
     return total_interracial_neighbors
 
+def num_leastrace_neighbors(x,y,g,races):
+    grid = g.grid
+    racetotals = {}
+    for race in races:
+        if(race != grid[x][y]):
+            racetotals[race] = 0
+    neighbors = get_neighbors(x,y,g)
+    for neighbor in neighbors:
+        if((neighbor != grid[x][y]) and bothoccupied([neighbor,grid[x][y]])):
+            racetotals[neighbor] += 1
+    return min(racetotals.values())
+
 def total_interracial_edges(g):
     grid = g.grid
     totaledges = 0
     for i in range(len(grid)):
         for j in range(len(grid[i])):
             totaledges += num_interracial_neighbors(i,j,g)
+    return totaledges/2
+
+def total_leastrace_edges(g,races):
+    grid = g.grid
+    totaledges = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            totaledges += num_leastrace_neighbors(i,j,g)
     return totaledges/2
 
 def total_neighbors(x,y,g):
@@ -169,4 +247,8 @@ def total_edges(g):
 def interracialneighborratio(g):
     total = total_edges(g)
     return total_interracial_edges(g)/total if total > 0 else 0.0
+
+def leastraceneighborratio(g):
+    total = total_edges(g)
+    return total_leastrace_edges(g)/total if total > 0 else 0.0
 

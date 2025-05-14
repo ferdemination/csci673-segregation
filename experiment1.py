@@ -31,13 +31,10 @@ for no in num_orange:
         running = g.next_step()
     with open(f"results1.csv", "a", newline= '') as file:
         writer = csv.writer(file)
-        field = ["num_of_orange","race","avg_dist","K_div","multi_racial_fraction"]
+        field = ["race","avg_dist","K_div","multi_racial_fraction","dist_to_furthest","fraction_of_rarest"]
         writer.writerow(field)
     with open("results1.csv", "a", newline='') as file:
         writer = csv.writer(file)
         for col in colors:
             data = metrics[col]
-            writer.writerow([ no, col, data['avg_distance'], data['diversity'], data['edge_fraction'] ])
-
-
-
+            writer.writerow([ col, data['avg_distance'], data['diversity'], data['edge_fraction'], data['WORST_avg_distance'], data['WORST_diversity'] ])

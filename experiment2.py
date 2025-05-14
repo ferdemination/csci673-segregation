@@ -38,16 +38,16 @@ for r in num_races:
     races = {i:num_occupants for i in curr_colors}
     g = Grid(N=N,p=p,color_dict=color_dict,colors=races)
     running = True
-    K=5
+    K=3
     while running:
         metrics = metriccomputations.compute_metrics(g,curr_colors,K)
         running = g.next_step()
     with open(f"results2.csv", "a", newline= '') as file:
         writer = csv.writer(file)
-        field = ["num_of_races","race","avg_dist","K_div","multi_racial_fraction"]
+        field = ["num_of_races","race","avg_dist","K_div","multi_racial_fraction","dist_to_furthest","fraction_of_rarest"]
         writer.writerow(field)
     with open("results2.csv", "a", newline='') as file:
         writer = csv.writer(file)
         for col in curr_colors:
             data = metrics[col]
-            writer.writerow([ r, col, data['avg_distance'], data['diversity'], data['edge_fraction'] ])
+            writer.writerow([ r, col, data['avg_distance'], data['diversity'], data['edge_fraction'], data['WORST_avg_distance'], data['WORST_diversity'] ])

@@ -5,11 +5,11 @@ import random
 # Constants
 FPS = 30
 
-GRID_SIZE = 20
+GRID_SIZE = 25
 CELL_SIZE = 20
 WIDTH = HEIGHT = GRID_SIZE * CELL_SIZE
 
-PREFERENCE = 1000000  # homophilic preference for orange agents
+PREFERENCE = 10  # homophilic preference for orange agents
 
 ALPHA = 0.25  # fraction of orange among white + orange
 BETA = 0.1 # fraction of vacant cells
