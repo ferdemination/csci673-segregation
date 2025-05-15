@@ -13,7 +13,7 @@ colors = ["white", "black", "orange"]
 # defines a color->index coreespondence
 color_dict = {c:colors.index(c) for c in colors}
 
-p = [[-1,-1,-1], [-1,-1,-2], [1,-1,1]]
+p = [[-1,-1,-1], [-1,-1,-1], [0,-1,0]]
 
 fracs = [ _ / 10 for _ in range(1,10)]
 num_occupants = 300
