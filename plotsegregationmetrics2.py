@@ -14,28 +14,29 @@ matplotlib.rcParams.update({'font.size': 18})
 filename = './results2.csv'
 results = pd.read_csv(filename).values
 
-races = ["white", "black", "red", "blue", "orange", "green", "brown", "yellow", "purple", "pink"]
-colors = [(f"tab:{r}" if r!= "white" else "tab:olive") for r in races]
+races = ["white", "black"]
 metrics = ["avg_dist", "K_div", "multi_racial_fraction", "dist_to_furthest", "fraction_of_rarest"]
 
 num_races = [2, 4, 6, 8, 10]
 
-d = {i: [[] for _ in range(5)] for (i,j) in list(product(races,num_races))}
+d = {i: [[] for _ in range(5)] for i in races}
+print(d)
 
 for k in results:
     for i in range(5):
-        d[k[1]][i].append(k[i+2])
+        if k[1] == "white" or k[1] == "black":
+            d[k[1]][i].append(k[i+2])
+
 
 for i in range(5):
     for r in races:
-        for n in num_races:
             if r == "white":
-                color = "olive"
+                color = "r"
             else:
-                color = r
-            plt.plot(num_races,d[r, n][i], label=f"{r}" ,color=f"tab:{color}", marker='o', linestyle='-',markersize=4, linewidth=0.8 )
-    #ax = plt.gca()
-    #ax.set_ylim([0,1])
+                color = "b"
+            plt.plot(num_races,d[r][i], label=f"{r} agents" ,color=color, marker='o', linestyle='-',markersize=4, linewidth=0.8 )
+        #ax = plt.gca()
+        #ax.set_ylim([0,1])
     plt.tight_layout()
     plt.legend(loc="upper right")
     plt.savefig(f"plot_experiment2_{metrics[i]}.png")
